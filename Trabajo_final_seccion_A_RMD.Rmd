@@ -1,0 +1,129 @@
+---
+title: 'Trabajo final Seccion A: Ciencia de Datos: Modelos Predictivos I'
+author: "Ing. José Ricardo Rojas Lima"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## INTRODUCCIóN
+
+Como sabemos la oferta monetaria es la cantidad de dinero circulante en una economia en un periodo determinado. La importancia de estudiar este indicador radica en su impacto en la economía de México, y por consiguiente en la economia personal. como sabemos una de las consecuencias de la oferta monetaria es el impacto que se refleja directamente en las tasas de interes. Si hay un exceso de dinero en el mercado, las tasas de interes pueden bajar, lo que impulsa el gasto y la inversión. La escasez de dinero puede llevar a incremento en las tasas de interes lo que podría desalentar el gasto e impulsar el ahorro e invertir en instrumentos financieros por rendimientos altos.
+
+Por otra parte seria interesante analizar las exportaciones, ya que este indicador impacta directamente en la demanda de la moneda local, si un pais aumenta las exportaciones, es probable que la demanda de su moneda tambien aumente, lo que puede llevar a un fortalecimiento de la moneda local en los mercados de divisas. Un tipo de cambio más fuerte puede influir en la oferta monetaria al afectar la cantidad de moneda local en circulación en el país.
+
+En el siguiente documento se analizara el crecimiento de las tasas oferta monetaria (1989-2023) y las exportaciones(1993-2023) en Mexico, mediante modelos de regresion lineal, en especifico se aplicara un Modelo de tasa de crecimiento relativa compuesta.
+
+```{r librerias, echo=FALSE , message = FALSE, warning = FALSE, comment=""}
+
+library(forecast)
+library(openxlsx)
+library(dplyr)
+library(lubridate)
+```
+
+## Modelo de regresion lineal de la oferta monetaria
+
+```{r DataMining Oferta monetaria, echo=FALSE , include=FALSE}
+base <- read.xlsx("D:\\Personal Data/My Folders/Ricardo/Cursos/Cursos/Ciencia de datos/Modulos/Modulo 3/21 Introduccion a modelos estadisticos para prediccion/Ejercicios FTVM/Indicadores Externos/Oferta monetaria BANXICO.xlsx",
+                  detectDates = TRUE)
+
+base_OM <- base %>% 
+ filter(Fecha >= as.Date("1989/01/01") & Fecha < as.Date("2023/07/01")) 
+
+base_OM <- base_OM %>% 
+  mutate( dia = day(Fecha),
+          mes = month(Fecha),
+          anio = year(Fecha),
+         OM = as.numeric(replace(base_OM$OM, base_OM$OM == "N/E", 0)),
+         OM_BMC = as.numeric(replace(base_OM$OM_BMC, base_OM$OM_BMC == "N/E", 0)),
+         OM_DEP = as.numeric(replace(base_OM$OM_DEP, base_OM$OM_DEP == "N/E", 0)),
+         OM_TOTAL = OM + OM_BMC + OM_DEP) %>% 
+  group_by(anio,mes) %>% 
+  summarise(OM_TOTAL = sum(OM_TOTAL))
+
+attach(base_OM)
+tsbase <- ts(base_OM, start = c(1988,1), frequency = 12)
+
+```
+
+En el siguiente gráfico podemos observar el crecimiento de la oferta monetaria con respecto del tiempo.
+
+```{r Grafica Oferta Monetaria, include=TRUE, eval=TRUE}
+
+plot(tsbase[,"OM_TOTAL"],
+     xlab = "Periodo (1988 - 2023",
+     ylab = "Oferta monetaria")
+```
+
+Se aplica el modelo a la variable OM_TOTAL(Oferta Monetaria) y agregamos la variable "trend", esta permite que el modelo capture y modele el efecto general de cambio en el tiempo.
+
+```{r Modelo Oferta Monetaria, include=TRUE, eval=TRUE }
+
+tasa <- tslm(log(OM_TOTAL) ~ trend, data = tsbase) 
+summary(tasa)
+```
+
+Tomando en cuenta los resultados, nos interesa conocer cual es la tasa de crecimiento relativa compuesta, para esto se toma el beta de la variable "trend". 
+
+Para el periodo 1988 - 2023 es de :
+
+```{r Resultados, include=TRUE, eval=TRUE}
+
+(exp(0.01397)-1)*100
+
+```
+
+Entonces en promedio la oferta monetaria mes a mes se ha incrementado a razon de 1.4%
+
+
+## Modelo de regresion lineal Exportaciones
+
+```{r DataMiningExp Oferta monetaria, echo=FALSE , include=FALSE}
+base_Exp <- read.xlsx("D:\\Personal Data/My Folders/Ricardo/Cursos/Cursos/Ciencia de datos/Modulos/Modulo 3/21 Introduccion a modelos estadisticos para prediccion/Ejercicios FTVM/Indicadores Externos/Exportaciones BANXICO.xlsx",
+                  detectDates = TRUE)
+
+base_Exp <- base_Exp %>% 
+  mutate( dia = day(Fecha),
+          mes = month(Fecha),
+          anio = year(Fecha)) %>% 
+  group_by(anio,mes) %>% 
+  summarise(E_Totales = sum(E_Totales))
+
+attach(base_Exp)
+tsbase_Exp <- ts(base_Exp, start = c(1993,1), frequency = 12) 
+
+```
+
+Se realiza gráfica de las exportaciones a traves del tiempo.
+
+```{r Grafica Exportaciones, include=TRUE, eval=TRUE}
+  
+ 
+plot(tsbase_Exp[,"E_Totales"],
+     xlab = "Periodo (1993 - 2023)",
+     ylab = "Exportaciones")
+
+```
+
+Se aplica el modelo a la variable E_TOTALES(Exportaciones) y agregamos la variable "trend", permitiendo que capture y modele el efecto general de cambio en el tiempo.
+
+```{r Modelo Exportaciones, include=TRUE, eval=TRUE }
+
+tasa <- tslm(log(E_Totales) ~ trend , data = tsbase_Exp) 
+summary(tasa)
+
+```
+
+De igual manera nos interesa conocer la tasa de crecimiento relativa compuesta, para esto se toma el beta de la variable "trend". 
+
+Para el periodo 1993 - 2023 es de :
+
+```{r ResultadosExportaciones, include=TRUE, eval=TRUE}
+
+(exp(.005922)-1)*100
+
+```
+
+Entonces en promedio las exportaciones mes a mes se ha incrementado a razon de 0.5939 %
